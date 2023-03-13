@@ -9,10 +9,10 @@ namespace EfCoreApp
         static void Main(string[] args)
         {
             Console.WriteLine(
-                "Commands: l (list), u (change url), r (resetDb) and e (exit) - add -l to first two for logs");
+                "Commands: l (список книг), u (изменить url у последней книги), r (пересоздать базу) and e (выйти) - добавьте -l для первых двух команд для просмотра логов");
             Console.Write(
                 "Checking if database exists... ");
-            Console.WriteLine(Commands.WipeCreateSeed(true) ? "created database and seeded it." : "it exists.");
+            Console.WriteLine(Commands.WipeCreateSeed(false) ? "created database and seeded it." : "it exists.");
             do
             {
                 Console.Write("> ");

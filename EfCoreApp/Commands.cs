@@ -11,41 +11,98 @@ namespace EfCoreApp
 {
     public static class Commands
     {
+        // ListAll вывод списка данных в консоль
         public static void ListAll()
         {
             using (var db = new AppDbContext()) // Создание объекта класса Контекст для получения данных из бд
             {
-                foreach (var book in db.Books.AsNoTracking() // Считывание всех книг из базы
-                    .Include(book => book.Author)) // добавление в запрос считвания информации об авторе
+                foreach (var book in db.Books.AsNoTracking() // Считывание всех книг из базы без возможности изменений
+                    .Include(book => book.Author)) // добавление в запрос информации об авторе
                 {
-                    var webUrl = book.Author.WebUrl ?? "- no web url given -";
+                    var webUrl = book.Author.WebUrl ?? "- url отсутствует -";
                     Console.WriteLine($"{book.Title} by {book.Author.Name}");
-                    Console.WriteLine("     Published on " +
+                    Console.WriteLine("     Опубликованно " +
                                       $"{book.PublishedOn:dd-MMM-yyyy}. {webUrl}");
                 }
             }
         }
-        // ListAll вывод данных в консоль
 
+        public static void ChangeAuthor() 
+        {
+            
+            int fieldOfChange = 0;
+            int authorOfChange;
+
+            using (var db = new AppDbContext())
+            {
+                foreach (var author in db.Books.Include(book => book.Author)) // разделить вывод авторов и внесение изменений
+                {
+
+                    Console.WriteLine($" {author.AuthorId} {author.Author.Name} {author.Author.WebUrl} ");
+                    Console.WriteLine("Выберите id автора для изменения");
+                    authorOfChange = Convert.ToInt32(Console.ReadLine());
+                    Console.WriteLine(" Выберите поле для изменения \t " +
+                        " '1' - name / '2' - url ");
+                    fieldOfChange = Convert.ToInt32(Console.ReadLine());
+
+                    switch (fieldOfChange)
+                    {
+
+                        case 1:
+                            Console.WriteLine("Введите значение для поля name");
+                            author.Author.Name = Console.ReadLine();
+                            break;
+                        default:
+                            break;
+                    }
+
+                    Console.WriteLine(" Для сохранения нажмине S ");
+                }
+
+                
+            }
+        }
+
+        public static void ChangeBook() 
+        {
+
+        }
+
+        public static void ChangeAny() 
+        {
+            Console.WriteLine("Выберите тип объекта изменения указав номер из списка");
+            Console.WriteLine("'1' - Автор / '2' - Книга");
+            var typeOfChange = Console.ReadLine();
+            switch (typeOfChange)
+            {
+                case "1":
+                    ChangeAuthor();
+                    break;
+                case "2":
+                    ChangeBook();
+                    break;
+                default: Console.WriteLine("adsf"); break;
+            }
+        }
+
+        // CgangeWebUrl изменение url
         public static void ChangeWebUrl()
         {
-            Console.WriteLine("New Quantum Networking WebUrl > ");
-            var newWebUrl = Console.ReadLine(); // Считываем новый url через консоль
+            Console.WriteLine("Введите url для книги Quantum Networking > ");
+            var newWebUrl = Console.ReadLine(); // Считываем новый url
 
             using (var db = new AppDbContext())
             {
                 var singlebook = db.Books
                     .Include(book => book.Author)
-                    .Single(book => book.Title == "Quantum Networking"); // выбор экземпляра по названию
-
+                    .Single(book => book.Title == "Quantum Networking"); // выбор единственного экземпляра по названию
                 singlebook.Author.WebUrl = newWebUrl;
                 db.SaveChanges(); // внесение изменений в бд
-                Console.WriteLine("... SavedChanges called.");
+                Console.WriteLine("... Данные сохранены.");
             }
             ListAll();
 
         }
-        // CgangeWebUrl изменение url
 
         public static void ListAllWithLogs()
         {
@@ -106,36 +163,47 @@ namespace EfCoreApp
         /// <summary>
         ///     This will wipe and create a new database - which takes some time
         /// </summary>
-        /// <param name="onlyIfNoDatabase">If true it will not do anything if the database exists</param>
+        /// <param name="onlyIfNoDatabase">если = true то бд не создается</param>
         /// <returns>returns true if database database was created</returns>
         public static bool WipeCreateSeed(bool onlyIfNoDatabase)
         {
             using (var db = new AppDbContext())
             {
-                if (onlyIfNoDatabase && (db.GetService<IDatabaseCreator>() as RelationalDatabaseCreator).Exists())
+                if (onlyIfNoDatabase && (db.GetService<IDatabaseCreator>() as RelationalDatabaseCreator).Exists()) // возвращает false если база данных уже существует
                     return false;
 
-                db.Database.EnsureDeleted();
-                db.Database.EnsureCreated();
-                if (!db.Books.Any())
-                {
-                    WriteTestData(db);
-                    Console.WriteLine("Seeded database");
-                }
+                db.Database.EnsureDeleted(); // перезапись базы данных
+                db.Database.EnsureCreated(); // перезапись базы данных
+
+                WriteTestData(db);
+                Console.WriteLine("Seeded database");
+                
             }
 
             return true;
         }
 
+        // Заполнение бд тестовыми данными
         public static void WriteTestData(this AppDbContext db)
         {
-            var martinFowler = new Author
+            Author martinFowler = new Author
             {
                 Name = "Martin Fowler",
                 WebUrl = "http://martinfowler.com/"
             };
 
-            var books = new List<Book>
+            Author ericEvans = new Author
+            {
+                Name = "Eric Evans",
+                WebUrl = "http://domainlanguage.com/"
+            };
+
+            Author futurePerson = new Author
+            {
+                Name = "Future Person"
+            };
+
+            List<Book> books = new List<Book> // список книг
             {
                 new Book
                 {
@@ -156,14 +224,14 @@ namespace EfCoreApp
                     Title = "Domain-Driven Design",
                     Description = "Linking business needs to software design",
                     PublishedOn = new DateTime(2003, 8, 30),
-                    Author = new Author {Name = "Eric Evans", WebUrl = "http://domainlanguage.com/"}
+                    Author = ericEvans
                 },
                 new Book
                 {
                     Title = "Quantum Networking",
                     Description = "Entangled quantum networking provides faster-than-light data communications",
                     PublishedOn = new DateTime(2057, 1, 1),
-                    Author = new Author {Name = "Future Person"}
+                    Author = futurePerson
                 }
             };
 
