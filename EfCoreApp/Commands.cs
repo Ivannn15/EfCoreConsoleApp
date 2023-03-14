@@ -8,68 +8,114 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace EfCoreApp
-{
+{ /// <summary>
+/// ///////////// добавить изменение для таблицы книги
+/// </summary>
     public static class Commands
     {
         // ListAll вывод списка данных в консоль
-        public static void ListAll()
+        public static void ListAll(string item)
         {
-            using (var db = new AppDbContext()) // Создание объекта класса Контекст для получения данных из бд
+            switch (item)
             {
-                foreach (var book in db.Books.AsNoTracking() // Считывание всех книг из базы без возможности изменений
-                    .Include(book => book.Author)) // добавление в запрос информации об авторе
-                {
-                    var webUrl = book.Author.WebUrl ?? "- url отсутствует -";
-                    Console.WriteLine($"{book.Title} by {book.Author.Name}");
-                    Console.WriteLine("     Опубликованно " +
-                                      $"{book.PublishedOn:dd-MMM-yyyy}. {webUrl}");
-                }
+                case "book":
+                    using (var db = new AppDbContext()) // Создание объекта класса Контекст для получения данных из бд
+                    {
+                        foreach (var book in db.Books.AsNoTracking() // Считывание всех книг из базы без возможности изменений
+                            .Include(book => book.Author)) // добавление в запрос информации об авторе
+                        {
+                            var webUrl = book.Author.WebUrl ?? "- url отсутствует -";
+                            Console.WriteLine($"{book.Title} by {book.Author.Name}");
+                            Console.WriteLine("     Опубликованно " +
+                                              $"{book.PublishedOn:dd-MMM-yyyy}. {webUrl}");
+                        }
+                    }
+                    break;
+                case "author":
+                    using (var db = new AppDbContext())
+                    {
+                        foreach (var author in db.Authors.AsNoTracking())
+                        {
+                            var webUrl = author.WebUrl ?? "- url отсутствует -";
+                            Console.WriteLine($"{author.AuthorId} {author.Name} {webUrl}");
+                        }
+                    }
+                    break;
             }
         }
 
+        
+
         public static void ChangeAuthor() 
         {
-            
-            int fieldOfChange = 0;
-            int authorOfChange;
+            var fieldOfChange = "";
+            int IDauthorOfChange = 1;
 
             using (var db = new AppDbContext())
             {
-                foreach (var author in db.Books.Include(book => book.Author)) // разделить вывод авторов и внесение изменений
+                do
                 {
-
-                    Console.WriteLine($" {author.AuthorId} {author.Author.Name} {author.Author.WebUrl} ");
+                    
+                    ListAll("author");
                     Console.WriteLine("Выберите id автора для изменения");
-                    authorOfChange = Convert.ToInt32(Console.ReadLine());
-                    Console.WriteLine(" Выберите поле для изменения \t " +
-                        " '1' - name / '2' - url ");
-                    fieldOfChange = Convert.ToInt32(Console.ReadLine());
-
-                    switch (fieldOfChange)
+                    IDauthorOfChange = Convert.ToInt32(Console.ReadLine());
+                    var selectedAuthor = db.Authors.SingleOrDefault(p => p.AuthorId == IDauthorOfChange);
+                    if (selectedAuthor == null)
                     {
-
-                        case 1:
-                            Console.WriteLine("Введите значение для поля name");
-                            author.Author.Name = Console.ReadLine();
-                            break;
-                        default:
-                            break;
+                        Console.WriteLine("Такого автора нет");
+                        continue;
                     }
+                    Console.WriteLine($"id - {selectedAuthor.AuthorId}, name - {selectedAuthor.Name}, url - {selectedAuthor.WebUrl}");
+                    Console.WriteLine("Выберите поле для изменения \n " +
+                        " '1' - name / '2' - url ");
+                    
+                    fieldOfChange = Console.ReadLine();
+                        switch (fieldOfChange)
+                        {
 
-                    Console.WriteLine(" Для сохранения нажмине S ");
+                            case "1":
+                                Console.WriteLine("Введите значение для поля name");
+                                selectedAuthor.Name = Console.ReadLine();
+                                db.SaveChanges();
+                                Console.WriteLine("Изменения внесены...");
+                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' \n>");
+                            if (Console.ReadLine() == "m")
+                            {
+                                GetMenu();
+                                break;
+                            }
+                            continue;
+                            case "2":
+                                Console.WriteLine("Введите значение для поля url");
+                                selectedAuthor.WebUrl = Console.ReadLine();
+                                db.SaveChanges();
+                                Console.WriteLine("Изменения внесены...");
+                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' ");
+                            if (Console.ReadLine() == "m")
+                            {
+                                GetMenu();
+                                break;
+                            }
+                            continue;
+                            default:
+                            Console.WriteLine("Вы ввели неверное значение");
+                                break;
+                        }
+                        // добавить изменение для остальных полей как у поля name сделать возвращение в главное меню
                 }
-
-                
+                while (true);
             }
         }
 
         public static void ChangeBook() 
         {
+            ListAll("book");
 
         }
 
         public static void ChangeAny() 
         {
+            Console.WriteLine(" - Для выхода из редактирования нажмите 'q' - ");
             Console.WriteLine("Выберите тип объекта изменения указав номер из списка");
             Console.WriteLine("'1' - Автор / '2' - Книга");
             var typeOfChange = Console.ReadLine();
@@ -81,27 +127,14 @@ namespace EfCoreApp
                 case "2":
                     ChangeBook();
                     break;
-                default: Console.WriteLine("adsf"); break;
+                case "q":
+                    GetMenu();
+                    break;
+                default:
+                    Console.WriteLine("Такого объекта не существует");
+                    ChangeAny();
+                    break;
             }
-        }
-
-        // CgangeWebUrl изменение url
-        public static void ChangeWebUrl()
-        {
-            Console.WriteLine("Введите url для книги Quantum Networking > ");
-            var newWebUrl = Console.ReadLine(); // Считываем новый url
-
-            using (var db = new AppDbContext())
-            {
-                var singlebook = db.Books
-                    .Include(book => book.Author)
-                    .Single(book => book.Title == "Quantum Networking"); // выбор единственного экземпляра по названию
-                singlebook.Author.WebUrl = newWebUrl;
-                db.SaveChanges(); // внесение изменений в бд
-                Console.WriteLine("... Данные сохранены.");
-            }
-            ListAll();
-
         }
 
         public static void ListAllWithLogs()
@@ -164,12 +197,12 @@ namespace EfCoreApp
         ///     This will wipe and create a new database - which takes some time
         /// </summary>
         /// <param name="onlyIfNoDatabase">если = true то бд не создается</param>
-        /// <returns>returns true if database database was created</returns>
+        /// <returns>возращает false если бд уже создана</returns>
         public static bool WipeCreateSeed(bool onlyIfNoDatabase)
         {
             using (var db = new AppDbContext())
             {
-                if (onlyIfNoDatabase && (db.GetService<IDatabaseCreator>() as RelationalDatabaseCreator).Exists()) // возвращает false если база данных уже существует
+                if (onlyIfNoDatabase && (db.GetService<IDatabaseCreator>() as RelationalDatabaseCreator).Exists()) 
                     return false;
 
                 db.Database.EnsureDeleted(); // перезапись базы данных
@@ -237,6 +270,43 @@ namespace EfCoreApp
 
             db.Books.AddRange(books);
             db.SaveChanges();
+        }
+
+        public static void GetMenu()
+        {
+            Console.WriteLine(
+                "Commands: \nl (список книг), \nc (изменить значение поля для выбранного объекта), \nu (изменить url у последней книги), \nr (пересоздать базу) \ne (выйти) \nдобавьте -l для первых двух команд для просмотра логов");
+            Console.Write(
+                "Checking if database exists... ");
+            Console.WriteLine(Commands.WipeCreateSeed(true) ? "created database and seeded it." : "it exists.");
+            Console.Write("> ");
+            do
+            {
+                var command = Console.ReadLine();
+                switch (command)
+                {
+                    case "l":
+                        Commands.ListAll("book");
+                        break;
+                    case "c":
+                        Commands.ChangeAny();
+                        break;
+                    case "l -l":
+                        Commands.ListAllWithLogs();
+                        break;
+                    case "u -l":
+                        Commands.ChangeWebUrlWithLogs();
+                        break;
+                    case "r":
+                        Commands.WipeCreateSeed(false);
+                        break;
+                    case "e":
+                        return;
+                    default:
+                        Console.WriteLine("Неизвестная команда");
+                        break;
+                }
+            } while (true);
         }
     }
 }

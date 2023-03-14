@@ -23,6 +23,7 @@ namespace EfCoreApp
 
         // Список сущностей таблицы книги включающий авторов
         public DbSet<Book> Books { get; set; }
+        public DbSet<Author> Authors { get; set; }
 
         ////// Настройка отображения в базу данных
     }
