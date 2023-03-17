@@ -19,13 +19,13 @@ namespace EfCoreApp
             switch (item)
             {
                 case "book":
-                    using (var db = new AppDbContext()) // Создание объекта класса Контекст для получения данных из бд
+                    using (var db = new AppDbContext()) 
                     {
                         foreach (var book in db.Books.AsNoTracking() // Считывание всех книг из базы без возможности изменений
                             .Include(book => book.Author)) // добавление в запрос информации об авторе
                         {
                             var webUrl = book.Author.WebUrl ?? "- url отсутствует -";
-                            Console.WriteLine($"{book.Title} by {book.Author.Name}");
+                            Console.WriteLine($"id-{book.BookId} {book.Title} by {book.Author.Name}");
                             Console.WriteLine("     Опубликованно " +
                                               $"{book.PublishedOn:dd-MMM-yyyy}. {webUrl}");
                         }
@@ -109,8 +109,81 @@ namespace EfCoreApp
 
         public static void ChangeBook() 
         {
-            ListAll("book");
+            var fieldOfChange = "";
+            int IDbookOfChange = 1;
 
+            using (var db = new AppDbContext())
+            {
+                do
+                {
+
+                    ListAll("book");
+                    Console.WriteLine("Выберите id книги для изменения");
+                    IDbookOfChange = Convert.ToInt32(Console.ReadLine());
+                    var selectedBook = db.Books.Include(p => p.Author).SingleOrDefault(p => p.BookId == IDbookOfChange);
+                    if (selectedBook == null)
+                    {
+                        Console.WriteLine("Такой книги нет");
+                        continue;
+                    }
+                    Console.WriteLine($"id - {selectedBook.BookId}, \ntitle - {selectedBook.Title}, \ndescription - {selectedBook.Description}, \npublished on - {selectedBook.PublishedOn}, \nauthor - {selectedBook.Author.Name}");
+                    Console.WriteLine("Выберите поле для изменения \n " +
+                        " '1' - title / '2' - description / '3' - published on ");
+
+                    fieldOfChange = Console.ReadLine();
+                    switch (fieldOfChange)
+                    {
+
+                        case "1":
+                            Console.WriteLine("Введите значение для поля title");
+                            selectedBook.Title = Console.ReadLine();
+                            db.SaveChanges();
+                            Console.WriteLine("Изменения внесены...");
+                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' \n>");
+                            if (Console.ReadLine() == "m")
+                            {
+                                GetMenu();
+                                break;
+                            }
+                            continue;
+                        case "2":
+                            Console.WriteLine("Введите значение для поля description");
+                            selectedBook.Description = Console.ReadLine();
+                            db.SaveChanges();
+                            Console.WriteLine("Изменения внесены...");
+                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' ");
+                            if (Console.ReadLine() == "m")
+                            {
+                                GetMenu();
+                                break;
+                            }
+                            continue;
+                        case "3":
+                            Console.WriteLine("Введите значение для поля description" +
+                                "\n1. год - >...");
+                            int newDateYear = Convert.ToInt32(Console.ReadLine());
+                            Console.Write("2. месяц - >...");
+                            int newDateMonth = Convert.ToInt32(Console.ReadLine());
+                            Console.WriteLine("3. день - >...");
+                            int newDateDay = Convert.ToInt32(Console.ReadLine());
+                            selectedBook.PublishedOn = new DateTime(newDateYear, newDateMonth, newDateDay);
+                            db.SaveChanges();
+                            Console.WriteLine("Изменения внесены...");
+                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' ");
+                            if (Console.ReadLine() == "m")
+                            {
+                                GetMenu();
+                                break;
+                            }
+                            continue;
+                        default:
+                            Console.WriteLine("Вы ввели неверное значение");
+                            break;
+                    }
+                    // добавить изменение для остальных полей как у поля name сделать возвращение в главное меню
+                }
+                while (true);
+            }
         }
 
         public static void ChangeAny() 
