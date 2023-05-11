@@ -1,81 +1,63 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using EfCoreApp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace EfCoreApp
-{ /// <summary>
-/// ///////////// добавить изменение для таблицы книги
-/// </summary>
+{
+
     public static class Commands
     {
+
         // ListAll вывод списка данных в консоль
-        public static void ListAll(string item)
+        public static void ListAll()
         {
-            switch (item)
+            using (var db = new AppDbContext())
             {
-                case "book":
-                    using (var db = new AppDbContext()) 
-                    {
-                        foreach (var book in db.Books.AsNoTracking() // Считывание всех книг из базы без возможности изменений
-                            .Include(book => book.Author)) // добавление в запрос информации об авторе
-                        {
-                            var webUrl = book.Author.WebUrl ?? "- url отсутствует -";
-                            Console.WriteLine($"id-{book.BookId} {book.Title} by {book.Author.Name}");
-                            Console.WriteLine("     Опубликованно " +
-                                              $"{book.PublishedOn:dd-MMM-yyyy}. {webUrl}");
-                        }
-                    }
-                    break;
-                case "author":
-                    using (var db = new AppDbContext())
-                    {
-                        foreach (var author in db.Authors.AsNoTracking())
-                        {
-                            var webUrl = author.WebUrl ?? "- url отсутствует -";
-                            Console.WriteLine($"{author.AuthorId} {author.Name} {webUrl}");
-                        }
-                    }
-                    break;
+                foreach (var employee in db.Employees.AsNoTracking())
+                {
+                    Console.WriteLine($"id-{employee.Id} FirstName - {employee.FirstName} LastName - {employee.LastName}");
+                    Console.WriteLine("     SalaryPerHour " +
+                                      $"{employee.SalaryPerHour}");
+                }
             }
         }
 
-        
-
-        public static void ChangeAuthor() 
+        // Изменение сотрудника
+        public static void ChangeEmployee() 
         {
             var fieldOfChange = "";
-            int IDauthorOfChange = 1;
+            int IdEmployeeOfchange = 1;
 
             using (var db = new AppDbContext())
             {
                 do
                 {
                     
-                    ListAll("author");
+                    ListAll();
                     Console.WriteLine("Выберите id автора для изменения");
-                    IDauthorOfChange = Convert.ToInt32(Console.ReadLine());
-                    var selectedAuthor = db.Authors.SingleOrDefault(p => p.AuthorId == IDauthorOfChange);
-                    if (selectedAuthor == null)
+                    IdEmployeeOfchange = Convert.ToInt32(Console.ReadLine());
+                    var selectedEmployee = db.Employees.SingleOrDefault(p => p.Id == IdEmployeeOfchange);
+                    if (selectedEmployee == null)
                     {
-                        Console.WriteLine("Такого автора нет");
+                        Console.WriteLine("Такого работника нет");
                         continue;
                     }
-                    Console.WriteLine($"id - {selectedAuthor.AuthorId}, name - {selectedAuthor.Name}, url - {selectedAuthor.WebUrl}");
+                    Console.WriteLine($"id - {selectedEmployee.Id}, FirstName - {selectedEmployee.FirstName}, LastName - {selectedEmployee.LastName}, SalaryPerHour - {selectedEmployee.SalaryPerHour}");
                     Console.WriteLine("Выберите поле для изменения \n " +
-                        " '1' - name / '2' - url ");
+                        " '1' - FirstName / '2' - LastName / '3' - SalaryPerHour ");
                     
                     fieldOfChange = Console.ReadLine();
                         switch (fieldOfChange)
                         {
 
                             case "1":
-                                Console.WriteLine("Введите значение для поля name");
-                                selectedAuthor.Name = Console.ReadLine();
+                                Console.WriteLine("Введите значение для поля FirstName");
+                                selectedEmployee.FirstName = Console.ReadLine();
                                 db.SaveChanges();
                                 Console.WriteLine("Изменения внесены...");
                             Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' \n>");
@@ -85,12 +67,36 @@ namespace EfCoreApp
                                 break;
                             }
                             continue;
+
                             case "2":
-                                Console.WriteLine("Введите значение для поля url");
-                                selectedAuthor.WebUrl = Console.ReadLine();
+                                Console.WriteLine("Введите значение для поля LastName");
+                                selectedEmployee.LastName = Console.ReadLine();
                                 db.SaveChanges();
                                 Console.WriteLine("Изменения внесены...");
                             Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' ");
+                            if (Console.ReadLine() == "m")
+                            {
+                                GetMenu();
+                                break;
+                            }
+                            continue;
+
+                            case "3":
+                            Console.WriteLine("Введите значение для поля SalaryPerHour");
+                            //var salary = Convert.ToDecimal(Console.ReadLine());
+                            if (decimal.TryParse(Console.ReadLine(), out decimal salary))
+                            {
+                                selectedEmployee.SalaryPerHour = salary;
+                                db.SaveChanges();
+                                Console.WriteLine("Изменения внесены...");
+                                Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' ");
+                            }
+                            else
+                            {
+                                Console.WriteLine("> Вы ввели число неверного формата!!!!!\n>Попробуйте еще раз\n");
+                                continue;
+                            }
+                            
                             if (Console.ReadLine() == "m")
                             {
                                 GetMenu();
@@ -107,170 +113,7 @@ namespace EfCoreApp
             }
         }
 
-        public static void ChangeBook() 
-        {
-            var fieldOfChange = "";
-            int IDbookOfChange = 1;
-
-            using (var db = new AppDbContext())
-            {
-                do
-                {
-
-                    ListAll("book");
-                    Console.WriteLine("Выберите id книги для изменения");
-                    IDbookOfChange = Convert.ToInt32(Console.ReadLine());
-                    var selectedBook = db.Books.Include(p => p.Author).SingleOrDefault(p => p.BookId == IDbookOfChange);
-                    if (selectedBook == null)
-                    {
-                        Console.WriteLine("Такой книги нет");
-                        continue;
-                    }
-                    Console.WriteLine($"id - {selectedBook.BookId}, \ntitle - {selectedBook.Title}, \ndescription - {selectedBook.Description}, \npublished on - {selectedBook.PublishedOn}, \nauthor - {selectedBook.Author.Name}");
-                    Console.WriteLine("Выберите поле для изменения \n " +
-                        " '1' - title / '2' - description / '3' - published on ");
-
-                    fieldOfChange = Console.ReadLine();
-                    switch (fieldOfChange)
-                    {
-
-                        case "1":
-                            Console.WriteLine("Введите значение для поля title");
-                            selectedBook.Title = Console.ReadLine();
-                            db.SaveChanges();
-                            Console.WriteLine("Изменения внесены...");
-                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' \n>");
-                            if (Console.ReadLine() == "m")
-                            {
-                                GetMenu();
-                                break;
-                            }
-                            continue;
-                        case "2":
-                            Console.WriteLine("Введите значение для поля description");
-                            selectedBook.Description = Console.ReadLine();
-                            db.SaveChanges();
-                            Console.WriteLine("Изменения внесены...");
-                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' ");
-                            if (Console.ReadLine() == "m")
-                            {
-                                GetMenu();
-                                break;
-                            }
-                            continue;
-                        case "3":
-                            Console.WriteLine("Введите значение для поля description" +
-                                "\n1. год - >...");
-                            int newDateYear = Convert.ToInt32(Console.ReadLine());
-                            Console.Write("2. месяц - >...");
-                            int newDateMonth = Convert.ToInt32(Console.ReadLine());
-                            Console.WriteLine("3. день - >...");
-                            int newDateDay = Convert.ToInt32(Console.ReadLine());
-                            selectedBook.PublishedOn = new DateTime(newDateYear, newDateMonth, newDateDay);
-                            db.SaveChanges();
-                            Console.WriteLine("Изменения внесены...");
-                            Console.WriteLine(" Продолжить изменения - tab any key... / перейти в меню - 'm' ");
-                            if (Console.ReadLine() == "m")
-                            {
-                                GetMenu();
-                                break;
-                            }
-                            continue;
-                        default:
-                            Console.WriteLine("Вы ввели неверное значение");
-                            break;
-                    }
-                    // добавить изменение для остальных полей как у поля name сделать возвращение в главное меню
-                }
-                while (true);
-            }
-        }
-
-        public static void ChangeAny() 
-        {
-            Console.WriteLine(" - Для выхода из редактирования нажмите 'q' - ");
-            Console.WriteLine("Выберите тип объекта изменения указав номер из списка");
-            Console.WriteLine("'1' - Автор / '2' - Книга");
-            var typeOfChange = Console.ReadLine();
-            switch (typeOfChange)
-            {
-                case "1":
-                    ChangeAuthor();
-                    break;
-                case "2":
-                    ChangeBook();
-                    break;
-                case "q":
-                    GetMenu();
-                    break;
-                default:
-                    Console.WriteLine("Такого объекта не существует");
-                    ChangeAny();
-                    break;
-            }
-        }
-
-        public static void ListAllWithLogs()
-        {
-            var logs = new List<string>();
-            using (var db = new AppDbContext())
-            {
-                var serviceProvider = db.GetInfrastructure();
-                var loggerFactory = (ILoggerFactory)serviceProvider.GetService(typeof(ILoggerFactory));
-
-                foreach (var entity in
-                    db.Books.AsNoTracking()
-                        .Include(book => book.Author))
-                {
-                    var webUrl = entity.Author.WebUrl == null
-                        ? "- no web url given -"
-                        : entity.Author.WebUrl;
-                    Console.WriteLine(
-                        $"{entity.Title} by {entity.Author.Name}");
-                    Console.WriteLine("     " +
-                                      $"Published on {entity.PublishedOn:dd-MMM-yyyy}" +
-                                      $". {webUrl}");
-                }
-            }
-
-            Console.WriteLine("---------- LOGS ------------------");
-            foreach (var log in logs)
-            {
-                Console.WriteLine(log);
-            }
-        }
-
-        public static void ChangeWebUrlWithLogs()
-        {
-            var logs = new List<string>();
-            Console.Write("New Quantum Networking WebUrl > ");
-            var newWebUrl = Console.ReadLine();
-
-            using (var db = new AppDbContext())
-            {
-                var serviceProvider = db.GetInfrastructure();
-                var loggerFactory = (ILoggerFactory)serviceProvider.GetService(typeof(ILoggerFactory));
-
-                var singleBook = db.Books
-                    .Include(book => book.Author)
-                    .Single(b => b.Title == "Quantum Networking");
-                singleBook.Author.WebUrl = newWebUrl;
-                db.SaveChanges();
-                Console.Write("... SavedChanges called.");
-            }
-
-            Console.WriteLine("---------- LOGS ------------------");
-            foreach (var log in logs)
-            {
-                Console.WriteLine(log);
-            }
-        }
-
-        /// <summary>
-        ///     This will wipe and create a new database - which takes some time
-        /// </summary>
-        /// <param name="onlyIfNoDatabase">если = true то бд не создается</param>
-        /// <returns>возращает false если бд уже создана</returns>
+        // Проверка наличия созданной бд
         public static bool WipeCreateSeed(bool onlyIfNoDatabase)
         {
             using (var db = new AppDbContext())
@@ -278,77 +121,110 @@ namespace EfCoreApp
                 if (onlyIfNoDatabase && (db.GetService<IDatabaseCreator>() as RelationalDatabaseCreator).Exists()) 
                     return false;
 
-                db.Database.EnsureDeleted(); // перезапись базы данных
-                db.Database.EnsureCreated(); // перезапись базы данных
+                db.Database.EnsureDeleted();
+                db.Database.EnsureCreated();
 
                 WriteTestData(db);
                 Console.WriteLine("Seeded database");
-                
             }
 
             return true;
         }
 
-        // Заполнение бд тестовыми данными
+        // Добавление сотрудника
+        public static void addEmployee()
+        {
+            int MaxId;
+            using(var db = new AppDbContext())
+            {
+                MaxId = db.Employees.Max(p => p.Id) + 1;
+
+            Employee employee = new Employee()
+            {
+                Id = MaxId,
+                LastName = "John",
+                FirstName = "Doe",
+                SalaryPerHour = (decimal)100.50,
+            };
+
+                db.Employees.Add(employee);
+                db.SaveChanges();
+            }
+            Console.WriteLine("> Добавлен новый сотрудник");
+        }
+
+        // Сохранение изменение и запись их в employees.json
+        public static void SaveChanges()
+        {
+            using (var db = new AppDbContext())
+            {
+                string json = JsonConvert.SerializeObject(db.Employees, Formatting.Indented);
+                File.WriteAllText(@"C:\Users\ivano\source\repos\EfCoreApp\EfCoreApp\bin\Debug\net5.0\employees.json", json);
+            }
+            Console.WriteLine("Изменения сохранены");
+        }
+
+        // Поиск сотрудника по id
+        public static void GetEmployee()
+        {
+            Console.WriteLine("> Введите id сотрудника");
+            int idEmp = Convert.ToInt32(Console.ReadLine());
+
+            using (var db = new AppDbContext())
+            {
+                var tempEmp = db.Employees.SingleOrDefault(p => p.Id == idEmp);
+
+                if (tempEmp == null)
+                {
+                    Console.WriteLine("> Такого сотрудника не существует");
+                }
+                else
+                {
+                    Console.WriteLine($"id-{tempEmp.Id} FirstName - {tempEmp.FirstName} LastName - {tempEmp.LastName}");
+                    Console.WriteLine("     SalaryPerHour " +
+                                      $"{tempEmp.SalaryPerHour}");
+                }
+            }
+        }
+
+        // Удаление сотрудника
+        public static void DeleteEmployee()
+        {
+            Console.WriteLine("Введите id сотрудника для удаления");
+            int idEmp = Convert.ToInt32(Console.ReadLine());
+
+            using (var db = new AppDbContext())
+            {
+                var tempEmp = db.Employees.SingleOrDefault(p => p.Id == idEmp);
+
+                if (tempEmp == null)
+                {
+                    Console.WriteLine("> Такого сотрудника не существует");
+                }
+                else
+                {
+                    db.Employees.Remove(tempEmp);
+                    db.SaveChanges();
+                }
+            }
+            Console.WriteLine("Сотрудник удален");
+        }
+
+        // Заполнение бд данными
         public static void WriteTestData(this AppDbContext db)
         {
-            Author martinFowler = new Author
-            {
-                Name = "Martin Fowler",
-                WebUrl = "http://martinfowler.com/"
-            };
+            string json = File.ReadAllText(@"C:\Users\ivano\source\repos\EfCoreApp\EfCoreApp\bin\Debug\net5.0\employees.json");
+            List<Employee> employees = JsonConvert.DeserializeObject<List<Employee>>(json);
 
-            Author ericEvans = new Author
-            {
-                Name = "Eric Evans",
-                WebUrl = "http://domainlanguage.com/"
-            };
-
-            Author futurePerson = new Author
-            {
-                Name = "Future Person"
-            };
-
-            List<Book> books = new List<Book> // список книг
-            {
-                new Book
-                {
-                    Title = "Refactoring",
-                    Description = "Improving the design of existing code",
-                    PublishedOn = new DateTime(1999, 7, 8),
-                    Author = martinFowler
-                },
-                new Book
-                {
-                    Title = "Patterns of Enterprise Application Architecture",
-                    Description = "Written in direct response to the stiff challenges",
-                    PublishedOn = new DateTime(2002, 11, 15),
-                    Author = martinFowler
-                },
-                new Book
-                {
-                    Title = "Domain-Driven Design",
-                    Description = "Linking business needs to software design",
-                    PublishedOn = new DateTime(2003, 8, 30),
-                    Author = ericEvans
-                },
-                new Book
-                {
-                    Title = "Quantum Networking",
-                    Description = "Entangled quantum networking provides faster-than-light data communications",
-                    PublishedOn = new DateTime(2057, 1, 1),
-                    Author = futurePerson
-                }
-            };
-
-            db.Books.AddRange(books);
+            db.Employees.AddRange(employees);
             db.SaveChanges();
         }
 
+        // Список команд для выполения
         public static void GetMenu()
         {
             Console.WriteLine(
-                "Commands: \nl (список книг), \nc (изменить значение поля для выбранного объекта), \nu (изменить url у последней книги), \nr (пересоздать базу) \ne (выйти) \nдобавьте -l для первых двух команд для просмотра логов");
+                "Commands: \nl (список сотрудников), \nc (изменить значение поля для выбранного объекта), \nd (удалить сотрудника), \na (добавить сотрудника), \ng (поиск сотдуника по id),\ns (сохранить изменения), \ne (выйти)");
             Console.Write(
                 "Checking if database exists... ");
             Console.WriteLine(Commands.WipeCreateSeed(true) ? "created database and seeded it." : "it exists.");
@@ -359,22 +235,25 @@ namespace EfCoreApp
                 switch (command)
                 {
                     case "l":
-                        Commands.ListAll("book");
+                        Commands.ListAll();
                         break;
                     case "c":
-                        Commands.ChangeAny();
-                        break;
-                    case "l -l":
-                        Commands.ListAllWithLogs();
-                        break;
-                    case "u -l":
-                        Commands.ChangeWebUrlWithLogs();
-                        break;
-                    case "r":
-                        Commands.WipeCreateSeed(false);
+                        Commands.ChangeEmployee();
                         break;
                     case "e":
                         return;
+                    case "g":
+                        Commands.GetEmployee();
+                        break;
+                    case "d":
+                        Commands.DeleteEmployee();
+                        break;
+                    case "s":
+                        Commands.SaveChanges();
+                        break;
+                    case "a":
+                        Commands.addEmployee();
+                        break;
                     default:
                         Console.WriteLine("Неизвестная команда");
                         break;

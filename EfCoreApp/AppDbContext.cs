@@ -1,30 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace EfCoreApp
 {
     public class AppDbContext : DbContext
     {
-        // Строка подключения
-        private const string ConnectionString = "server=localhost;user=root;password=root;database=EfCoreDb;";
+        private const string ConnectionString = "server=localhost;user=root;password=root;database=EfCoreTestDb;";
             
-
-        // настройка параметров бд для подключения MySql
-        protected override void OnConfiguring(
-            DbContextOptionsBuilder optionsBuilder)
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder
                 .UseMySql(ConnectionString, new MySqlServerVersion(new Version(8, 0, 11)));
         }
 
-        // Список сущностей таблицы книги включающий авторов
-        public DbSet<Book> Books { get; set; }
-        public DbSet<Author> Authors { get; set; }
-
-        ////// Настройка отображения в базу данных
+        public DbSet<Employee> Employees { get; set; }
     }
 }
